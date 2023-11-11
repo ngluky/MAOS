@@ -62,8 +62,8 @@ class Login(CTkFrame):
 
             print(auth)
 
-            self.main_window.change.set(True)
-            self.main_window.users_curr.set(len(self.main_window.Accounts) - 1)
+            self.main_window.event_value_account_change.set(True)
+            self.main_window.index_user_curr.set(len(self.main_window.Accounts) - 1)
 
 
         except (exceptions.AuthException, HCaptchaTimeoutException) as er:

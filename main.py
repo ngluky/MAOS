@@ -61,11 +61,10 @@ class App(CTk):
         self.main_home_frame: CTkFrame = None
         self.exitFlag = False
         self.Accounts = []
-        self.users = []
-        self.EndPoints: EndPoints = None
+        self.Accounts = []
+        self.EndPoints: list[EndPoints] = []
 
         self.loop = loop
-
 
         # loading cookie
         self.render_loading_startup()
@@ -73,7 +72,6 @@ class App(CTk):
             with open("data.d", "rb") as file:
                 self.loading_startup.set_text("loading cookie file")
                 data = pickle.load(file)
-                print(data)
                 self.loop.create_task(self.load_cookie(data))
 
         except FileNotFoundError:
@@ -89,7 +87,7 @@ class App(CTk):
             self.widget_update()
             return
 
-        class HanderLogin:
+        class HandelLogin:
             def __init__(self, progress):
                 self.count = 0
                 self.loading_startup = progress
@@ -100,13 +98,16 @@ class App(CTk):
                 self.loading_startup.setprogress(self.count / len_)
                 return auth
 
-        loading = HanderLogin(self.loading_startup)
+        loading = HandelLogin(self.loading_startup)
 
         self.Accounts = []
         tasks = list([
             self.loop.create_task(loading.login_cookie(i)) for i in auths
         ])
         self.Accounts = await asyncio.gather(*tasks)
+
+
+
         print(self.Accounts)
         self.widget_update()
 
@@ -131,8 +132,8 @@ class App(CTk):
         # print(tk.font.families())
 
     def render_home(self):
-        if self.EndPoints is None:
-            self.EndPoints = EndPoints(self.Accounts[self.index_user_curr.get()])
+        if len(self.EndPoints) == 0:
+            self.EndPoints = [EndPoints(i) for i in self.Accounts]
         self.main_home_frame = Home(self, self.EndPoints)
         self.main_home_frame.place(x=0, y=0, relwidth=1, relheight=1)
 

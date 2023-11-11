@@ -10,7 +10,7 @@ URL_PLYER_CARD_DEF = "https://media.valorant-api.com/playercards/c89194bd-4710-b
 
 class Acc(CTkFrame):
     def __init__(self, master, corner_radius, *arg, **kw) -> None:
-        super().__init__(master, fg_color="transparent", *arg, **kw)
+        super().__init__(master, corner_radius=corner_radius, *arg, **kw)
 
         self.name = tk.StringVar(self, '')
         self.title = tk.StringVar(self, '')
@@ -47,19 +47,19 @@ class Acc(CTkFrame):
         img_down = CTkImage(Image.open("img/arrow-down-d.png"), Image.open("img/arrow-down-l.png"))
 
         buttons_up = CTkButton(buttons_frame, text='', height=40, width=40, fg_color="transparent", corner_radius=10,
-                               hover=False, image=img_up, command=self.up)
+                               hover=False, image=img_up)
         buttons_up.place(x=0, y=0, anchor=NW)
 
         buttons_down = CTkButton(buttons_frame, text='', height=40, width=40, fg_color="transparent", corner_radius=10,
-                                 hover=False, image=img_down, command=self.down)
+                                 hover=False, image=img_down)
         buttons_down.place(x=0, rely=1, anchor=SW)
 
     def _size_update(self, height):
-        if self.avt_img:
+        if self.avt_img is not None:
             self.avt_img.configure(size=(int(height * 0.7), int(height * 0.7)))
 
     async def _set_avt(self, url=URL_PLYER_CARD_DEF, path=None):
-        print("start")
+        print(url)
         if url is not None:
             img = await async_load_img_from_url(url)
             img_pil = cropping_image_in_a_circular(img)
@@ -81,29 +81,43 @@ class Acc(CTkFrame):
     def set_title(self, text: str):
         self.title.set(text)
 
+
 class AccInfor(CTkFrame):
-    def __init__(self, master, corner_radius,*arg, **kw) -> None:
+    def __init__(self, master, corner_radius, *arg, **kw) -> None:
         super().__init__(master, fg_color="transparent", *arg, **kw)
-        self.configure(height=self.master["height"])
+        self.height = self.master["height"]
+        self.configure(height=self.height)
         self.corner_radius = corner_radius
         self.values = []
         self.frames = []
+        self.index = 0
         # self.bind("<Configure>", self.size_update)
 
     def render_acc(self):
-        pass
+        for index, ele in enumerate(self.frames):
+            ele: CTkFrame
+            ele.place(x=0, y=index * self.height, relwidth=1, relheight=1)
 
-    def add(self, data):
-        # data = {
-        #     "name": str,
-        #     "avt": str url,
-        #     "title"
-        # }
-        pass
+    def _render_frame(self, data: dict):
+        frame = Acc(self, 20, height=self.height)
+        frame.set_avt(data.get('avt', ''))
+        frame.set_name(data.get('name', ''))
+        frame.set_title(data.get('title', ''))
+        self.frames.append(frame)
+
+    def add(self, name: str, title: str, avt: str):
+        data = {
+            "name": name,
+            "avt": avt,
+            "title": title
+        }
+        self.values.append(data)
+        self._render_frame(data)
+
+        self.render_acc()
 
     def get(self, index):
         pass
 
     def remove(self, index):
         pass
-
