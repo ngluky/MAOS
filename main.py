@@ -61,7 +61,7 @@ class App(CTk):
         self.main_home_frame: CTkFrame = None
         self.exitFlag = False
         self.Accounts = []
-        self.Accounts = []
+        self.users=[]
         self.EndPoints: list[EndPoints] = []
 
         self.loop = loop
