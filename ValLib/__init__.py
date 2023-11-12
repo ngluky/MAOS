@@ -4,12 +4,15 @@ from .exceptions import *
 from .structs import *
 from .version import Version
 from .Weapons import Weapons
-
+from .helper import get_region, get_shard, async_get_region
 __all__ = [
     "authenticate",
     "Version",
     "User", "Auth", "Token",
     "AuthException",
     "EndPoints",
-    "Weapons"
+    "Weapons",
+    "get_shard",
+    "get_region",
+    "async_get_region"
 ]
