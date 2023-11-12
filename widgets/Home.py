@@ -16,7 +16,7 @@ class Home(CTkFrame):
     def __init__(self, master, end_points: list[EndPoints] = None, *args, **kwargs):
         super().__init__(master, fg_color="transparent", *args, **kwargs)
 
-        self.EndPoints: EndPoints = end_points
+        self.EndPoints: list[EndPoints] = end_points
         self.loop: AbstractEventLoop = self.winfo_toplevel().loop
 
         self.main_home_frame = CTkFrame(self, fg_color="transparent")
@@ -71,13 +71,16 @@ class Home(CTkFrame):
         return ''
 
     async def get_player_titles(self, player_title_id):
+        if player_title_id == "00000000-0000-0000-0000-000000000000": return ""
         async with httpx.AsyncClient() as client:
             print(player_title_id)
             resp = await client.get(f"https://valorant-api.com/v1/playertitles/{player_title_id}")
             data = resp.json()
-            titles = data["data"]["titleText"]
+            try:
+                titles = data["data"]["titleText"]
+                return titles
+            except KeyError:
+                return ''
 
-            return titles
-
-    def set_end_points(self, end_point: EndPoints):
-        self.EndPoints = end_point
+    def add(self, endponts):
+        self.EndPoints.append(endponts)

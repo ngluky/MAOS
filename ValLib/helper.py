@@ -23,6 +23,7 @@ def get_region(auth: Auth) -> str:
     region = jsonData["affinities"]["live"]
     return region
 
+
 async def async_get_region(auth: Auth):
     data = {
         "id_token": auth.id_token
@@ -30,7 +31,7 @@ async def async_get_region(auth: Auth):
     apiURL = "https://riot-geo.pas.si.riotgames.com/pas/v1/product/valorant"
 
     async with AsyncClient() as client:
-        data = await client.put(apiURL, headers=make_headers(auth), json=data)
+        data = await client.put(apiURL, headers=make_headers(auth), data=data)
         jsonData = data.json()
         region = jsonData["affinities"]["live"]
         return region

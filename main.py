@@ -57,11 +57,11 @@ class App(CTk):
 
         # init value
         self.loading_startup: Loaing = None
-        self.login_frame_: Home = None
-        self.main_home_frame: CTkFrame = None
+        self.login_frame_: Login = None
+        self.main_home_frame: Home = None
         self.exitFlag = False
         self.Accounts = []
-        self.users=[]
+        self.users = []
         self.EndPoints: list[EndPoints] = []
 
         self.loop = loop
@@ -72,11 +72,12 @@ class App(CTk):
             with open("data.d", "rb") as file:
                 self.loading_startup.set_text("loading cookie file")
                 data = pickle.load(file)
+                for i in data:
+                    print(i.expire)
                 self.loop.create_task(self.load_cookie(data))
 
         except FileNotFoundError:
             self.widget_update()
-
 
         # add event
         self.protocol("WM_DELETE_WINDOW", self.on_quit)
@@ -87,7 +88,7 @@ class App(CTk):
             self.widget_update()
             return
 
-        class HandelLogin:
+        class HandelCookie:
             def __init__(self, progress):
                 self.count = 0
                 self.loading_startup = progress
@@ -98,7 +99,7 @@ class App(CTk):
                 self.loading_startup.setprogress(self.count / len_)
                 return auth
 
-        loading = HandelLogin(self.loading_startup)
+        loading = HandelCookie(self.loading_startup)
 
         self.Accounts = []
         tasks = list([
@@ -106,9 +107,6 @@ class App(CTk):
         ])
         self.Accounts = await asyncio.gather(*tasks)
 
-
-
-        print(self.Accounts)
         self.widget_update()
 
     def account_change(self, *args):
@@ -116,8 +114,18 @@ class App(CTk):
         # if self.login_frame_:
         #     self.login_frame_.set_auth(self.Accounts[self.users_curr.get()])
 
-    def widget_update(self, *args):
+    async def handel_add_cookie(self, user: User):
+        auth = await authenticate(user)
+        self.Accounts.append(auth)
+        self.users.append(user.username)
+        self.EndPoints.append(EndPoints(auth))
+        self.main_home_frame.add(EndPoints(auth))
+        print(auth)
 
+        self.widget_update()
+        self.index_user_curr.set(len(self.Accounts) - 1)
+
+    def widget_update(self, *args):
         if self.loading_startup:
             self.loading_startup.destroy()
         elif self.login_frame_:
@@ -131,10 +139,32 @@ class App(CTk):
             self.render_home()
         # print(tk.font.families())
 
+    def render_(self, win=None):
+        if self.loading_startup:
+            self.loading_startup.destroy()
+        elif self.login_frame_:
+            self.login_frame_.destroy()
+        elif self.main_home_frame:
+            self.main_home_frame.destroy()
+
+        if win is None:
+            return
+
+        if win == "login":
+            self.render_login()
+
+        elif win == "home":
+            self.render_home()
+
+        elif win == "loading":
+            self.render_loading_startup()
+
     def render_home(self):
         if len(self.EndPoints) == 0:
             self.EndPoints = [EndPoints(i) for i in self.Accounts]
-        self.main_home_frame = Home(self, self.EndPoints)
+
+        if self.main_home_frame is None:
+            self.main_home_frame = Home(self, self.EndPoints)
         self.main_home_frame.place(x=0, y=0, relwidth=1, relheight=1)
 
     def render_login(self):

@@ -56,16 +56,7 @@ class Login(CTkFrame):
         print(user_name, passw, remember)
         user = User(user_name, passw, remember)
         try:
-            auth = await authenticate(user)
-            self.main_window.Accounts.append(auth)
-            self.main_window.users.append(user_name)
-
-            print(auth)
-
-            self.main_window.event_value_account_change.set(True)
-            self.main_window.index_user_curr.set(len(self.main_window.Accounts) - 1)
-
-
+            await self.main_window.handel_add_cookie(user)
         except (exceptions.AuthException, HCaptchaTimeoutException) as er:
             messagebox.showerror('Auth Error', er)
             self.logging.place_forget()

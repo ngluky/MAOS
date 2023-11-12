@@ -43,7 +43,7 @@ class Acc(CTkFrame):
 
         # acc status widget
         acc_status = AccStatus(self, OFFLINE)
-        acc_status.pack(side=LEFT, expand=True, fill='both', padx=(0, 20))
+        acc_status.place(relx=.7, rely=0.5, anchor=CENTER)
         acc_status.set_status((10, 0))
 
     def _size_update(self, height):
@@ -51,7 +51,6 @@ class Acc(CTkFrame):
             self.avt_img.configure(size=(int(height * 0.7), int(height * 0.7)))
 
     async def _set_avt(self, url=URL_PLYER_CARD_DEF, path=None):
-        print("set avt: ", url)
         if url is not None:
             img = await async_load_img_from_url(url)
             img_pil = cropping_image_in_a_circular(img)
@@ -68,7 +67,6 @@ class Acc(CTkFrame):
         self.winfo_toplevel().loop.create_task(self._set_avt(url, path))
 
     def set_name(self, name: str):
-        print("set name: ", name)
         self.name.set(name)
 
     def set_title(self, text: str):
@@ -82,9 +80,11 @@ class AddAcc(CTkFrame):
         self.configure(fg_color=self._detect_color_of_master())
         self.configure(bg_color=self.winfo_toplevel()["background"])
 
-        img = CTkImage(Image.open("img/add-d.png"), Image.open("img/add-l.png"))
-        button = CTkButton(self, text='', image=img, fg_color="transparent")
-        button.place(relx=.5, rely=.5, anchor=CENTER)
+        img = CTkImage(Image.open("img/add-d.png"), Image.open("img/add-l.png"), size=(40, 40))
+        button = CTkButton(self, text='', image=img, fg_color="transparent", hover=False)
+        if command is not None:
+            button.configure(command=command)
+        button.place(relx=.5, rely=.5, anchor=CENTER, relheight=1)
 
 
 class AccInfor(CTkFrame):
@@ -121,7 +121,10 @@ class AccInfor(CTkFrame):
         self.button_frame.pack(side=RIGHT, fill=Y, padx=10, pady=10)
 
         # button add Acc
-        self.button_Acc = AddAcc(self, command=lambda: print('click'), corner_radius=20)
+        self.button_Acc = AddAcc(self, command=self.handel_click, corner_radius=20)
+
+    def handel_click(self):
+        self.winfo_toplevel().render_("login")
 
     async def update_pos_widget(self):
 
@@ -137,9 +140,6 @@ class AccInfor(CTkFrame):
                 self.render_acc()
                 await asyncio.sleep(0.01)
 
-
-
-
     def render_acc(self):
         for index, ele in enumerate(self.frames):
             ele.place(x=0, y=index * self.height - self.shift_index, relheight=1, relwidth=1)
@@ -149,6 +149,7 @@ class AccInfor(CTkFrame):
         self.button_frame.lift()
 
     def _render_frame(self, data: dict):
+        print(data)
         frame = Acc(self, 20, height=self.height)
         frame.set_avt(data.get('avt', ''))
         frame.set_name(data.get('name', ''))
