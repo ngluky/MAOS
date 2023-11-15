@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 from asyncio.events import AbstractEventLoop
 import tkinter as tk
 from customtkinter import *
@@ -100,6 +101,7 @@ class AccInfor(CTkFrame):
         # setup value
         self.values = []
         self.frames = []
+        self.callbacks = []
         self.shift_index = 0
         self.target_index = 0
 
@@ -122,6 +124,7 @@ class AccInfor(CTkFrame):
 
         # button add Acc
         self.button_Acc = AddAcc(self, command=self.handel_click, corner_radius=20)
+
 
     def handel_click(self):
         self.winfo_toplevel().render_("login")
@@ -162,6 +165,9 @@ class AccInfor(CTkFrame):
             "avt": avt,
             "title": title
         }
+        for i in self.values:
+            if name == i['name']:
+                return
         self.values.append(data)
         self._render_frame(data)
 
@@ -181,6 +187,9 @@ class AccInfor(CTkFrame):
 
         self.loop.create_task(self.update_pos_widget())
 
+        self._call_callback(self.target_index // self.height)
+
+
     def down(self):
         if self.target_index + self.height > len(self.frames) * self.height:
             return
@@ -188,3 +197,15 @@ class AccInfor(CTkFrame):
         self.target_index += self.height
 
         self.loop.create_task(self.update_pos_widget())
+
+        self._call_callback(self.target_index // self.height)
+
+    def is_account_change(self, callback):
+        self.callbacks.append(callback)
+
+    def _call_callback(self, *args):
+        for i in self.callbacks:
+            if inspect.iscoroutinefunction(i):
+                self.loop.create_task(i(*args))
+            else:
+                i(*args)

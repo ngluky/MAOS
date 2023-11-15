@@ -1,116 +1,30 @@
+import asyncio
+import json
 import time
 import tkinter as tk
+
+import httpx
 from customtkinter import *
 from typing import Union, Tuple
 from PIL import Image
 import numpy as np
 from widgets.ImageHandel import *
+from ValLib import EndPoints
+from widgets.Variable import CustomVariable
 
 TEST_URL = "https://media.valorant-api.com/bundles/d958b181-4e7b-dc60-7c3c-e3a3a376a8d2/displayicon.png"
-TEST_SKIN = "https://media.valorant-api.com/weaponskins/89be9866-4807-6235-2a95-499cd23828df/displayicon.png"
+TEST_SKIN = "https://media.valorant-api.com/weaponskinlevels/578e9077-4f88-260c-e54c-b988425c60e4/displayicon.png"
 
 FILL_X = "fillX"
 FILL_Y = "fillY"
-
-
-class ImageLabel(CTkLabel):
-    def __init__(self, master, path=None, url=None, corner_radius=20, fill_type=FILL_Y, *args, **kw) -> None:
-        super().__init__(master, *args, **kw)
-
-        self.img_size = None
-        self.img = None
-
-        self._fill_type = fill_type
-        self._corner_radius = corner_radius
-        self.set_img(path, url)
-
-        if fill_type is not None:
-            self.bind('<Configure>', self.update_size_img)
-
-    def update_size_img(self, event = None):
-        if self.img is not None:
-            if event is not None:
-                self.configure(image=self.crop(event.height, event.width))
-            else:
-                self.configure(image=self.crop(self.winfo_height(), self.winfo_width()))
-
-    def crop(self, height, width):
-        if self._fill_type == FILL_Y:
-            height_ = height
-            width_ = int(height / self.img_size[1] * self.img_size[0])
-            img = self.img.resize((width_, height_))
-
-            if width < width_:
-                denta_width = width_ - width
-                img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
-
-            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius), size=(width, height))
-
-        elif self._fill_type == FILL_X:
-            width_ = width
-            height_ = int(width / self.img_size[0] * self.img_size[1])
-            img = self.img.resize((width_, height_))
-
-            if width < width_:
-                denta_width = width_ - width
-                img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
-
-            return CTkImage(remove_background(cropping_image_in_a_rounded_rectangle(img, self._corner_radius)), size=(width_, height_))
-
-    def set_img(self, path=None, url=None):
-        self.winfo_toplevel().loop.create_task(self.async_set_img(path, url))
-
-    async def async_set_img(self, path=None, url=None):
-        if url is not None:
-            img = await async_load_img_from_url(url)
-        elif path is not None:
-            img = Image.open(path)
-        else:
-            return FileExistsError
-
-        self.img = img
-        self.img_size = self.img.size
-
-        self.update_size_img()
-
-class Shop(CTkFrame):
-    def __init__(self, master, *args, **kw) -> None:
-        super().__init__(master, *args, **kw)
-
-        self.grid_rowconfigure((0, 1, 2, 3), weight=1)
-        self.grid_columnconfigure(0, weight=3, uniform='a')
-        self.grid_columnconfigure(1, weight=1, uniform='a')
-
-        self.bundle_label = ImageLabel(self, text='', url=TEST_URL)
-        self.bundle_label.grid(row=0, column=0, rowspan=4, sticky=NSEW, padx=5, pady=5)
-
-        self.item1 = ImageLabel(self, text='', width=50, fill_type=FILL_X)
-        self.item1.grid(row=0, column=1, sticky=NSEW, padx=5, pady=5)
-        self.item1.set_img(url=TEST_SKIN)
-
-        self.item2 = ImageLabel(self, text='', fill_type=FILL_X)
-        self.item2.grid(row=1, column=1, sticky=NSEW, padx=5, pady=5)
-        self.item2.set_img(url=TEST_SKIN)
-
-        self.item3 = ImageLabel(self, text='', fill_type=FILL_X)
-        self.item3.grid(row=2, column=1, sticky=NSEW, padx=5, pady=5)
-        self.item3.set_img(url=TEST_SKIN)
-
-        self.item4 = ImageLabel(self, text='', fill_type=FILL_X)
-        self.item4.grid(row=3, column=1, sticky=NSEW, padx=5, pady=5)
-        self.item4.set_img(url=TEST_SKIN)
-
-    def show(self):
-        self.pack(fill=BOTH, expand=True)
-
-    def hidden(self):
-        self.forget()
+FILL_AUTO = "fillAuto"
 
 
 class TabView(CTkFrame):
-    def __init__(self, master, *args, **kw) -> None:
+    def __init__(self, master, current_acc: CustomVariable = None, *args, **kw) -> None:
         super().__init__(master, *args, **kw)
 
+        self.current_acc: CustomVariable = current_acc
         self.button_icon = {
             "shop": CTkImage(Image.open("./img/shop-d.png"), Image.open("./img/shop-l.png")),
             "match": CTkImage(Image.open("./img/feed-d.png"), Image.open("./img/feed-l.png")),
@@ -126,19 +40,103 @@ class TabView(CTkFrame):
         self.main_view = CTkFrame(self, fg_color="transparent")
         self.main_view.pack(side=LEFT, fill=BOTH, expand=True, pady=7, padx=7)
 
-        shop = Shop(self.main_view)
-        shop.show()
+        self.frame_ = {
+            "shop": Shop(self.main_view, current_acc=self.current_acc),
+            "setting": None,
+            "math": None
+        }
 
-    def _match(self):
-        pass
-
-    def _setting(self):
-        pass
+        var = self.frame_["shop"]
+        var.show()
 
     def tab_handel(self, tab):
         for key in self.button_icon.keys():
             if self.button_icon[key] is tab:
                 print(key)
+
+
+async def get_weapon_skin_level_by_uuid(uuid):
+    #  return url image skin
+    url = f'https://valorant-api.com/v1/weapons/skinlevels/{uuid}'
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url)
+
+        data = resp.json()
+
+        return data['data']['displayIcon']
+
+
+async def get_bundle_by_uuid(uuid):
+    url = f"https://valorant-api.com/v1/bundles/{uuid}"
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(url)
+        data = resp.json()
+        return data["data"]["displayIcon"]
+
+
+class Shop(CTkFrame):
+    def __init__(self, master, current_acc: CustomVariable = None, *args, **kw) -> None:
+        super().__init__(master, *args, **kw)
+
+        # init value
+        self.current_acc = current_acc
+        self.is_show = False
+        self.loop = asyncio.get_event_loop()
+
+        # setup layout
+        self.grid_rowconfigure((0, 1, 2, 3), weight=1, uniform='a')
+        self.grid_columnconfigure(0, weight=3, uniform='a')
+        self.grid_columnconfigure(1, weight=1, uniform='a')
+
+        self.bundle_label = ImageLabel(self, text='')
+        self.bundle_label.grid(row=0, column=0, rowspan=4, sticky=NSEW, padx=5, pady=5)
+
+        self.skins = [
+            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO),
+            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO),
+            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO),
+            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO)
+        ]
+        for index, ele in enumerate(self.skins):
+            ele.grid(row=index, column=1, sticky=NSEW, padx=5, pady=5)
+
+        self.current_acc.add_callback(self.handel_event)
+
+    async def get_shop(self, endpoint: EndPoints):
+        data = await endpoint.Store.Storefront()
+        bundle = data["FeaturedBundle"]["Bundle"]["DataAssetID"]
+        skins = data["SkinsPanelLayout"]["SingleItemOffers"]
+
+        bundle_url = await get_bundle_by_uuid(bundle)
+        self.bundle_label.set_img(url=bundle_url)
+
+        async def get_skin(uuid, index):
+            ele = self.skins[index]
+            skin_url = await get_weapon_skin_level_by_uuid(uuid)
+            ele.set_img(url=skin_url)
+
+        tasks = [self.loop.create_task(get_skin(id, index)) for index, id in enumerate(skins)]
+
+    def set_(self, data):
+        pass
+
+    def show(self):
+        self.pack(fill=BOTH, expand=True)
+        self.is_show = True
+        endpont = self.current_acc.get()
+        print(endpont)
+        if isinstance(endpont, EndPoints):
+            self.loop.create_task(self.get_shop(self.current_acc.get()))
+
+    def hidden(self):
+        self.pack_forget()
+        self.is_show = False
+
+    def shop(self):
+        pass
+
+    async def handel_event(self, mode, value):
+        await self.get_shop(value)
 
 
 class TabMaster(CTkFrame):
@@ -165,7 +163,6 @@ class TabMaster(CTkFrame):
                 e.pack(side=LEFT, padx=2)
 
     def _click_handel(self, ele):
-
         # xóa toàn bộ bg
         for e in self.list_button:
             e.configure(fg_color=self.bg_color)
@@ -197,3 +194,80 @@ class TabMaster(CTkFrame):
             button.configure(height=unit, width=unit)
 
         return button
+
+
+class ImageLabel(CTkLabel):
+    def __init__(self, master, path=None, url=None, size=None, corner_radius=20, fill_type=FILL_Y,
+                 *args, **kw) -> None:
+        super().__init__(master, *args, **kw)
+
+        self.img_size = None
+        self.img = None
+
+        self._fill_type = fill_type
+        self._corner_radius = corner_radius
+        self.set_img(path, url)
+
+        if fill_type is not None:
+            self.bind('<Configure>', self.update_size_img)
+
+    def update_size_img(self, event=None):
+        if self.img is not None:
+            if event is not None:
+                self.configure(image=self.crop(event.height, event.width))
+            else:
+                self.configure(image=self.crop(self.winfo_height(), self.winfo_width()))
+
+    def crop(self, height, width):
+        if self._fill_type == FILL_Y:
+            height_ = height
+            width_ = int(height / self.img_size[1] * self.img_size[0])
+            img = self.img.resize((width_, height_))
+
+            if width < width_:
+                denta_width = width_ - width
+                img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
+
+            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius), size=(width, height))
+
+        elif self._fill_type == FILL_X:
+            width_ = width
+            height_ = int(width / self.img_size[0] * self.img_size[1])
+            img = self.img.resize((width_, height_))
+
+            if width < width_:
+                denta_width = width_ - width
+                img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
+
+            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius),
+                            size=(width_, height_))
+
+        elif self._fill_type == FILL_AUTO:
+            width_ = width
+            height_ = int(width / self.img_size[0] * self.img_size[1])
+
+            if height_ > height:
+                height_ = height - 1
+                width_ = int(height / self.img_size[1] * self.img_size[0])
+                img = self.img.resize((width_, height_))
+            else:
+                img = self.img.resize((width_, height_))
+
+            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius), size=(width_, height_))
+
+    def set_img(self, path=None, url=None):
+        self.winfo_toplevel().loop.create_task(self.async_set_img(path, url))
+
+
+    async def async_set_img(self, path=None, url=None):
+        if url is not None:
+            img = await async_load_img_from_url(url)
+        elif path is not None:
+            img = Image.open(path)
+        else:
+            return FileExistsError
+
+        self.img = img
+        self.img_size = self.img.size
+
+        self.update_size_img()

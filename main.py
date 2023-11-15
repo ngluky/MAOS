@@ -11,6 +11,7 @@ from ValLib import async_login_cookie
 from widgets.Home import *
 from widgets.Loading import *
 from widgets.Login import *
+from widgets.Variable import ListVariable, CustomVariable
 
 CORNER_RADIUS = 20
 
@@ -50,7 +51,7 @@ class App(CTk):
 
         # tkinter.Variable
         self.index_user_curr = tkinter.IntVar(self, -1)
-        self.index_user_curr.trace("w", self.account_change)
+        # self.index_user_curr.trace("w", self.account_change)
 
         self.event_value_account_change = tkinter.BooleanVar(self, False)
         self.event_value_account_change.trace('w', self.widget_update)
@@ -60,10 +61,8 @@ class App(CTk):
         self.login_frame_: Login = None
         self.main_home_frame: Home = None
         self.exitFlag = False
-        self.Accounts = []
-        self.users = []
-        self.EndPoints: list[EndPoints] = []
-
+        self.Accounts: ListVariable = ListVariable()
+        self.EndPoints: ListVariable[EndPoints] = ListVariable()
         self.loop = loop
 
         # loading cookie
@@ -95,6 +94,7 @@ class App(CTk):
 
             async def login_cookie(self, auth: Auth):
                 auth = await async_login_cookie(auth)
+                print(auth)
                 self.count += 1
                 self.loading_startup.setprogress(self.count / len_)
                 return auth
@@ -102,51 +102,40 @@ class App(CTk):
         loading = HandelCookie(self.loading_startup)
 
         self.Accounts = []
-        tasks = list([
-            self.loop.create_task(loading.login_cookie(i)) for i in auths
-        ])
+        tasks = [self.loop.create_task(loading.login_cookie(i)) for i in auths]
         self.Accounts = await asyncio.gather(*tasks)
-
+        for i in self.Accounts:
+            self.EndPoints.append(EndPoints(i))
         self.widget_update()
-
-    def account_change(self, *args):
-        print(*args)
-        # if self.login_frame_:
-        #     self.login_frame_.set_auth(self.Accounts[self.users_curr.get()])
 
     async def handel_add_cookie(self, user: User):
-        auth = await authenticate(user)
-        self.Accounts.append(auth)
-        self.users.append(user.username)
-        self.EndPoints.append(EndPoints(auth))
-        self.main_home_frame.add(EndPoints(auth))
-        print(auth)
+        try:
+            auth = await authenticate(user)
+            self.Accounts.append(auth)
+            self.EndPoints.append(EndPoints(auth))
+            print(auth)
+            self.render_("home")
+            return True
 
-        self.widget_update()
-        self.index_user_curr.set(len(self.Accounts) - 1)
+        except exceptions.AuthException as err:
+            messagebox.showerror(err)
+            return False
 
     def widget_update(self, *args):
-        if self.loading_startup:
-            self.loading_startup.destroy()
-        elif self.login_frame_:
-            self.login_frame_.destroy()
-        elif self.main_home_frame:
-            self.main_home_frame.destroy()
-
+        self.clear_()
         if len(self.Accounts) == 0:
-            self.render_login()
+            self.render_("login")
         else:
-            self.render_home()
+            self.render_("home")
         # print(tk.font.families())
 
-    def render_(self, win=None):
-        if self.loading_startup:
-            self.loading_startup.destroy()
-        elif self.login_frame_:
-            self.login_frame_.destroy()
-        elif self.main_home_frame:
-            self.main_home_frame.destroy()
+    def clear_(self):
+        for widgets in self.winfo_children():
+            widgets.place_forget()
+            widgets.pack_forget()
 
+    def render_(self, win=None):
+        self.clear_()
         if win is None:
             return
 
@@ -160,19 +149,17 @@ class App(CTk):
             self.render_loading_startup()
 
     def render_home(self):
-        if len(self.EndPoints) == 0:
-            self.EndPoints = [EndPoints(i) for i in self.Accounts]
-
         if self.main_home_frame is None:
             self.main_home_frame = Home(self, self.EndPoints)
-        self.main_home_frame.place(x=0, y=0, relwidth=1, relheight=1)
+        self.main_home_frame.show()
 
     def render_login(self):
         self.login_frame_ = Login(self, fg_color="transparent", corner_radius=CORNER_RADIUS)
-        self.login_frame_.pack(fill=BOTH, expand=True)
+        self.login_frame_.place(x=0, y=0, relwidth=1, relheight=1)
 
     def render_loading_startup(self):
         self.loading_startup = Loaing(self, type_=PROGRESS, text="loading cookie")
+
         self.loading_startup.place(x=0, y=0, relwidth=1, relheight=1)
 
     def on_quit(self):
