@@ -8,6 +8,7 @@ from tkinter import messagebox
 from widgets.AccInfor import *
 from widgets.TabView import *
 from widgets.Variable import ListVariable, CustomVariable
+from widgets.Timer_async import SetInterval, SetTimeout
 
 from ValLib import Auth, EndPoints, get_region, get_shard, async_get_region
 
@@ -55,6 +56,7 @@ class Home(CTkFrame):
         self.Current_Acc: CustomVariable = CustomVariable(None)
         self.Current_Acc.set(self.EndPoints[0])
         self.loop: AbstractEventLoop = self.winfo_toplevel().loop
+        self.check_account_status_timer = SetInterval(20, self.check_account_status)
 
         #
         self.main_home_frame = CTkFrame(self, fg_color="transparent")
@@ -68,11 +70,11 @@ class Home(CTkFrame):
         # AccInfor
         self.acc_infor = AccInfor(home_frame_top, corner_radius=CORNER_RADIUS)
         self.acc_infor.grid(row=0, column=0, sticky=NSEW, padx=(10, 0), pady=10)
-        self.acc_infor.is_account_change(self.handl_event)
+        self.acc_infor.is_account_change(self.handel_event)
 
         # play button
         button_play_font = CTkFont("Consolas", 20, "bold")
-        button_play = CTkButton(home_frame_top, text="PLAY", width=50, font=button_play_font)
+        button_play = CTkButton(home_frame_top, text="PLAY", width=50, font=button_play_font, command=lambda x: print("button play clicked"))
         button_play.grid(row=0, column=1, sticky=NSEW, padx=(20, 10), pady=30)
 
         # tabView - shop -
@@ -80,9 +82,13 @@ class Home(CTkFrame):
         home_frame_button.pack(side=TOP, fill=BOTH, expand=True, padx=10, pady=(0, 10))
         self.main_home_frame.pack(fill=BOTH, expand=True)
 
-    def handl_event(self, index):
+    def handel_play_button(self):
+        pass
+
+    def handel_event(self, index):
         if index < len(self.EndPoints):
             self.Current_Acc.set(self.EndPoints[index])
+            SetTimeout(1, self.check_account_status)
 
     async def api_star(self):
         for pvp in self.EndPoints:
@@ -95,8 +101,32 @@ class Home(CTkFrame):
         name = await get_player_name(pvp)
         avt = await get_player_card(player_card_id)
         title = await get_player_titles(player_title_id)
+
         self.acc_infor.add(name, title, avt)
 
     def show(self):
         self.place(x=0, y=0, relwidth=1, relheight=1)
-        self.loop.create_task(self.api_star())
+        task = self.loop.create_task(self.api_star())
+        task.add_done_callback(lambda x: self.check_account_status_timer.star())
+
+    def place_forget(self):
+        super().place_forget()
+        self.check_account_status_timer.cancel()
+
+    async def check_account_status(self):
+
+        account: EndPoints = self.Current_Acc.get()
+
+        party_infor = await account.Party.async_Party_Player()
+        if party_infor.get("httpStatus", False):
+            self.acc_infor.set_status_current_account("off")
+            print("offline")
+        else:
+            current_game = await account.CurrentGame.async_Current_Game()
+            match_id = current_game.get("MatchID", False)
+            if match_id:
+                self.acc_infor.set_status_current_account("in")
+                print("in match")
+            else:
+                self.acc_infor.set_status_current_account("on")
+                print("online")

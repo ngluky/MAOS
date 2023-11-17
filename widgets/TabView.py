@@ -27,6 +27,7 @@ class TabView(CTkFrame):
         self.current_acc: CustomVariable = current_acc
         self.button_icon = {
             "shop": CTkImage(Image.open("./img/shop-d.png"), Image.open("./img/shop-l.png")),
+            "account": CTkImage(Image.open("./img/account-d.png"), Image.open("./img/account-l.png")),
             "match": CTkImage(Image.open("./img/feed-d.png"), Image.open("./img/feed-l.png")),
             "setting": CTkImage(Image.open("./img/support-d.png"), Image.open("./img/support-l.png"))
         }
@@ -42,8 +43,9 @@ class TabView(CTkFrame):
 
         self.frame_ = {
             "shop": Shop(self.main_view, current_acc=self.current_acc),
-            "setting": None,
-            "math": None
+            "account": TabViewFrame(self.main_view),
+            "match": TabViewFrame(self.main_view),
+            "setting": TabViewFrame(self.main_view)
         }
 
         var = self.frame_["shop"]
@@ -53,6 +55,13 @@ class TabView(CTkFrame):
         for key in self.button_icon.keys():
             if self.button_icon[key] is tab:
                 print(key)
+                self.hidden_all_frame_()
+                frame = self.frame_.get(key, None)
+                frame.show()
+    def hidden_all_frame_(self):
+        for i in self.frame_.values():
+            i.hidden()
+
 
 
 async def get_weapon_skin_level_by_uuid(uuid):
@@ -74,13 +83,26 @@ async def get_bundle_by_uuid(uuid):
         return data["data"]["displayIcon"]
 
 
-class Shop(CTkFrame):
+class TabViewFrame(CTkFrame):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.is_show = False
+
+    def show(self):
+        self.pack(fill=BOTH, expand=True)
+        self.is_show = True
+
+    def hidden(self):
+        self.pack_forget()
+        self.is_show = False
+
+class Shop(TabViewFrame):
     def __init__(self, master, current_acc: CustomVariable = None, *args, **kw) -> None:
         super().__init__(master, *args, **kw)
 
         # init value
         self.current_acc = current_acc
-        self.is_show = False
         self.loop = asyncio.get_event_loop()
 
         # setup layout
@@ -92,10 +114,10 @@ class Shop(CTkFrame):
         self.bundle_label.grid(row=0, column=0, rowspan=4, sticky=NSEW, padx=5, pady=5)
 
         self.skins = [
-            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO),
-            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO),
-            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO),
-            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO)
+            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO, corner_radius=0),
+            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO, corner_radius=0),
+            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO, corner_radius=0),
+            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO, corner_radius=0)
         ]
         for index, ele in enumerate(self.skins):
             ele.grid(row=index, column=1, sticky=NSEW, padx=5, pady=5)
@@ -108,12 +130,14 @@ class Shop(CTkFrame):
         skins = data["SkinsPanelLayout"]["SingleItemOffers"]
 
         bundle_url = await get_bundle_by_uuid(bundle)
-        self.bundle_label.set_img(url=bundle_url)
+        if self.is_show:
+            self.bundle_label.set_img(url=bundle_url)
 
         async def get_skin(uuid, index):
             ele = self.skins[index]
             skin_url = await get_weapon_skin_level_by_uuid(uuid)
-            ele.set_img(url=skin_url)
+            if self.is_show:
+                ele.set_img(url=skin_url)
 
         tasks = [self.loop.create_task(get_skin(id, index)) for index, id in enumerate(skins)]
 
@@ -121,19 +145,11 @@ class Shop(CTkFrame):
         pass
 
     def show(self):
-        self.pack(fill=BOTH, expand=True)
-        self.is_show = True
+        super().show()
         endpont = self.current_acc.get()
         print(endpont)
         if isinstance(endpont, EndPoints):
             self.loop.create_task(self.get_shop(self.current_acc.get()))
-
-    def hidden(self):
-        self.pack_forget()
-        self.is_show = False
-
-    def shop(self):
-        pass
 
     async def handel_event(self, mode, value):
         await self.get_shop(value)
@@ -212,48 +228,55 @@ class ImageLabel(CTkLabel):
             self.bind('<Configure>', self.update_size_img)
 
     def update_size_img(self, event=None):
-        if self.img is not None:
-            if event is not None:
-                self.configure(image=self.crop(event.height, event.width))
-            else:
-                self.configure(image=self.crop(self.winfo_height(), self.winfo_width()))
+        if self.img is None:
+            return
+
+        if event is not None:
+            self.configure(image=self.crop(event.height, event.width))
+        else:
+            self.configure(image=self.crop(self.winfo_height(), self.winfo_width()))
+
+    def _crop_fill_y(self, height, width):
+        new_height = height
+        new_width = int(height / self.img_size[1] * self.img_size[0])
+        img = self.img.resize((new_width, new_height))
+
+        if width < new_width:
+            denta_width = new_width - width
+            img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
+
+        return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius), size=(width, height))
+
+    def _crop_fill_x(self, height, width):
+        new_width = width
+        new_height = int(width / self.img_size[0] * self.img_size[1])
+        img = self.img.resize((new_width, new_height))
+
+        if width < new_width:
+            denta_width = new_width - width
+            img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
+
+        return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius),
+                        size=(new_width, new_height))
 
     def crop(self, height, width):
         if self._fill_type == FILL_Y:
-            height_ = height
-            width_ = int(height / self.img_size[1] * self.img_size[0])
-            img = self.img.resize((width_, height_))
-
-            if width < width_:
-                denta_width = width_ - width
-                img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
-
-            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius), size=(width, height))
+            return self._crop_fill_y(height, width)
 
         elif self._fill_type == FILL_X:
-            width_ = width
-            height_ = int(width / self.img_size[0] * self.img_size[1])
-            img = self.img.resize((width_, height_))
-
-            if width < width_:
-                denta_width = width_ - width
-                img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
-
-            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius),
-                            size=(width_, height_))
+            return self._crop_fill_x(height, width)
 
         elif self._fill_type == FILL_AUTO:
-            width_ = width
-            height_ = int(width / self.img_size[0] * self.img_size[1])
+            new_width = width
+            new_height = int(width / self.img_size[0] * self.img_size[1])
 
-            if height_ > height:
-                height_ = height - 1
-                width_ = int(height / self.img_size[1] * self.img_size[0])
-                img = self.img.resize((width_, height_))
-            else:
-                img = self.img.resize((width_, height_))
+            if new_height > height:
+                new_height = height - 1
+                new_width = int(height / self.img_size[1] * self.img_size[0])
 
-            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius), size=(width_, height_))
+            img = self.img.resize((new_width, new_height))
+
+            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius), size=(new_width, new_height))
 
     def set_img(self, path=None, url=None):
         self.winfo_toplevel().loop.create_task(self.async_set_img(path, url))

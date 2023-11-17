@@ -9,7 +9,7 @@ from .EndPoints import EndPoints
 __all__ = [
     "authenticate",
     "Version",
-    "User", "Auth", "Token",
+    "User", "Auth", "Token", "ExtraAuth",
     "AuthException",
     "EndPoints",
     "Weapons",

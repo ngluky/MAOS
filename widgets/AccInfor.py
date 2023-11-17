@@ -43,9 +43,9 @@ class Acc(CTkFrame):
         title_text.pack(fill='both', expand=True)
 
         # acc status widget
-        acc_status = AccStatus(self, OFFLINE)
-        acc_status.place(relx=.7, rely=0.5, anchor=CENTER)
-        acc_status.set_status((10, 0))
+        self.acc_status = AccStatus(self, OFFLINE)
+        self.acc_status.place(relx=.7, rely=0.5, anchor=CENTER)
+        self.acc_status.set_status('off')
 
     def _size_update(self, height):
         if self.avt_img is not None:
@@ -59,6 +59,8 @@ class Acc(CTkFrame):
             img_pil = Image.open(path)
         else:
             raise KeyError("undefined url or path")
+
+
         size = (30, 30)
         self.avt_img = CTkImage(img_pil, size=size if (size[0] != 0 or size[1] != 0) else img_pil.size)
         self._size_update(self['height'])
@@ -72,6 +74,9 @@ class Acc(CTkFrame):
 
     def set_title(self, text: str):
         self.title.set(text)
+
+    def set_status(self, text):
+        self.acc_status.set_status(text)
 
 
 class AddAcc(CTkFrame):
@@ -132,16 +137,16 @@ class AccInfor(CTkFrame):
     async def update_pos_widget(self):
 
         if self.target_index > self.shift_index:
-            for i in range(self.shift_index, self.target_index, 1):
-                self.shift_index = i
-                self.render_acc()
-                await asyncio.sleep(0.01)
-
+            step = range(self.shift_index, self.target_index, 2)
         else:
-            for i in range(self.shift_index, self.target_index, -1):
-                self.shift_index = i
-                self.render_acc()
-                await asyncio.sleep(0.01)
+            step = range(self.shift_index, self.target_index, -2)
+
+        for i in step:
+            self.shift_index = i
+            self.render_acc()
+            await asyncio.sleep(0.015)
+
+        self.shift_index = self.target_index
 
     def render_acc(self):
         for index, ele in enumerate(self.frames):
@@ -172,6 +177,10 @@ class AccInfor(CTkFrame):
         self._render_frame(data)
 
         self.render_acc()
+
+    def set_status_current_account(self, text):
+        frame = self.frames[self.target_index // self.height]
+        frame.set_status(text)
 
     def get(self, index):
         pass
