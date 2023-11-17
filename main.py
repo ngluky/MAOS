@@ -1,17 +1,22 @@
 import asyncio
 
 import ctypes
+import json
 import pickle
 import tkinter.font
+
 from ctypes import windll
+from CTkMessagebox import CTkMessagebox
 
 import _tkinter
 
 from ValLib import async_login_cookie
+from Constant import Constant
 from widgets.Home import *
 from widgets.Loading import *
 from widgets.Login import *
 from widgets.Variable import ListVariable, CustomVariable
+
 
 CORNER_RADIUS = 20
 
@@ -34,11 +39,10 @@ class MainApp:
         self.window = None
 
     async def exec(self, loop):
-        self.window = App((800, 450), "MAOS", r".\icons\icon.ico", loop)
+        self.window = App((810, 450), "MAOS", r".\icons\icon.ico", loop)
         await self.window.show()
 
 
-# noinspection PyGlobalUndefined
 class App(CTk):
     def __init__(self, start_size, title, icon, loop: AbstractEventLoop) -> None:
         super().__init__()
@@ -61,8 +65,6 @@ class App(CTk):
         self.login_frame_: Login = None
         self.main_home_frame: Home = None
         self.exitFlag = False
-        self.Accounts: ListVariable = ListVariable()
-        self.EndPoints: ListVariable[EndPoints] = ListVariable()
         self.loop = loop
 
         # loading cookie
@@ -78,6 +80,15 @@ class App(CTk):
         except FileNotFoundError:
             self.widget_update()
 
+
+        # loading global setting
+        try:
+            with open('setting_global.json', 'r+', encoding='UTF-8') as file:
+                Constant.Setting_Valorant = json.loads(file.read())
+
+        except (FileNotFoundError, json.JSONDecodeError):
+            Constant.Setting_Valorant = {}
+
         # add event
         self.protocol("WM_DELETE_WINDOW", self.on_quit)
 
@@ -92,7 +103,7 @@ class App(CTk):
                 self.count = 0
                 self.loading_startup = progress
 
-            async def login_cookie(self, auth: Auth):
+            async def login_cookie(self, auth: ExtraAuth):
                 auth = await async_login_cookie(auth)
                 print(auth)
                 self.count += 1
@@ -101,29 +112,28 @@ class App(CTk):
 
         loading = HandelCookie(self.loading_startup)
 
-        self.Accounts = []
         tasks = [self.loop.create_task(loading.login_cookie(i)) for i in auths]
-        self.Accounts = await asyncio.gather(*tasks)
-        for i in self.Accounts:
-            self.EndPoints.append(EndPoints(i))
+        Constant.Accounts = await asyncio.gather(*tasks)
+        for i in Constant.Accounts:
+            Constant.EndPoints.append(EndPoints(i))
         self.widget_update()
 
     async def handel_add_cookie(self, user: User):
         try:
             auth = await authenticate(user)
-            self.Accounts.append(auth)
-            self.EndPoints.append(EndPoints(auth))
+            Constant.Accounts.append(auth)
+            Constant.EndPoints.append(EndPoints(auth))
             print(auth)
             self.render_("home")
             return True
 
         except exceptions.AuthException as err:
-            messagebox.showerror(err)
+            CTkMessagebox(type="Error", message=err)
             return False
 
     def widget_update(self, *args):
         self.clear_()
-        if len(self.Accounts) == 0:
+        if len(Constant.Accounts) == 0:
             self.render_("login")
         else:
             self.render_("home")
@@ -150,7 +160,7 @@ class App(CTk):
 
     def render_home(self):
         if self.main_home_frame is None:
-            self.main_home_frame = Home(self, self.EndPoints)
+            self.main_home_frame = Home(self)
         self.main_home_frame.show()
 
     def render_login(self):
@@ -165,19 +175,26 @@ class App(CTk):
     def on_quit(self):
         print("quit")
         self.exitFlag = True
+        accounts = []
+        for i in Constant.Accounts:
+            if i.remember:
+                accounts.append(i)
         with open("data.d", "wb+") as file:
-            pickle.dump(self.Accounts, file)
+            pickle.dump(accounts, file)
+        with open('setting_global.json', 'w+', encoding='UTF-8') as file:
+            setting = json.dumps(Constant.Setting_Valorant)
+            file.write(setting)
         self.update()
-        self.quit()
+        # self.withdraw()
+
 
     async def show(self):
         while not self.exitFlag:
-            try:
-                self.winfo_exists()  # Will throw TclError if the main window is destroyed
-            except _tkinter.TclError:
-                break
             self.update()
             await asyncio.sleep(.01)
+
+        self.quit()
+
 
 
 if __name__ == "__main__":

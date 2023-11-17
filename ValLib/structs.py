@@ -37,6 +37,7 @@ class Token(Base):
 class Auth(Token):
     token: Token = field(repr=False)
     entitlements_token: str
+    remember: bool
     user_id: str
     cookies: Dict[str, str]
     access_token: str = field(init=False)
@@ -47,7 +48,8 @@ class Auth(Token):
 @dataclass
 class ExtraAuth(Auth):
     username: str
-    region: str
+    card_id: str
+    title_id: str
     auth: Auth = field(repr=False)
     token: Token = field(init=False)
     user_id: str = field(init=False)

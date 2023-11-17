@@ -41,6 +41,7 @@ def async_memoize():
                 return result
 
         return wrapped
+
     return wrapper
 
 
@@ -57,8 +58,8 @@ async def async_load_img_from_url(url) -> Image.Image:
 
         return Image.open(BytesIO(resp.content))
 
-
     return None
+
 
 def cropping_image_in_a_circular(img: Image.Image) -> Image.Image:
     mask_ = Image.open(MASK_CIRCULAR).convert('L')

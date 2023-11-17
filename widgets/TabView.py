@@ -2,14 +2,19 @@ import asyncio
 import json
 import time
 import tkinter as tk
-
 import httpx
-from customtkinter import *
+
+from asyncio.events import AbstractEventLoop
 from typing import Union, Tuple
+from customtkinter import *
+from CTkMessagebox import CTkMessagebox
 from PIL import Image
 import numpy as np
+
+from ValLib import EndPoints, ExtraAuth
+from Constant import Constant
+
 from widgets.ImageHandel import *
-from ValLib import EndPoints
 from widgets.Variable import CustomVariable
 
 TEST_URL = "https://media.valorant-api.com/bundles/d958b181-4e7b-dc60-7c3c-e3a3a376a8d2/displayicon.png"
@@ -21,12 +26,11 @@ FILL_AUTO = "fillAuto"
 
 
 class TabView(CTkFrame):
-    def __init__(self, master, current_acc: CustomVariable = None, *args, **kw) -> None:
+    def __init__(self, master, *args, **kw) -> None:
         super().__init__(master, *args, **kw)
-
-        self.current_acc: CustomVariable = current_acc
         self.button_icon = {
             "shop": CTkImage(Image.open("./img/shop-d.png"), Image.open("./img/shop-l.png")),
+            "account": CTkImage(Image.open("./img/curly-brackets-d.png"), Image.open("./img/curly-brackets-l.png")),
             "match": CTkImage(Image.open("./img/feed-d.png"), Image.open("./img/feed-l.png")),
             "setting": CTkImage(Image.open("./img/support-d.png"), Image.open("./img/support-l.png"))
         }
@@ -41,11 +45,13 @@ class TabView(CTkFrame):
         self.main_view.pack(side=LEFT, fill=BOTH, expand=True, pady=7, padx=7)
 
         self.frame_ = {
-            "shop": Shop(self.main_view, current_acc=self.current_acc),
-            "setting": None,
-            "math": None
+            "shop": Shop(self.main_view),
+            "account": ValorantSetting(self.main_view),
+            "match": TabViewFrame(self.main_view),
+            "setting": TabViewFrame(self.main_view)
         }
 
+        self.hidden_all_frame_()
         var = self.frame_["shop"]
         var.show()
 
@@ -53,6 +59,13 @@ class TabView(CTkFrame):
         for key in self.button_icon.keys():
             if self.button_icon[key] is tab:
                 print(key)
+                self.hidden_all_frame_()
+                frame = self.frame_.get(key, None)
+                frame.show()
+
+    def hidden_all_frame_(self):
+        for i in self.frame_.values():
+            i.hidden()
 
 
 async def get_weapon_skin_level_by_uuid(uuid):
@@ -74,13 +87,107 @@ async def get_bundle_by_uuid(uuid):
         return data["data"]["displayIcon"]
 
 
-class Shop(CTkFrame):
-    def __init__(self, master, current_acc: CustomVariable = None, *args, **kw) -> None:
+class TabViewFrame(CTkFrame):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.is_show = False
+
+    def show(self):
+        self.pack(fill=BOTH, expand=True)
+        self.is_show = True
+
+    def hidden(self):
+        self.pack_forget()
+        self.is_show = False
+
+
+class ValorantSetting(TabViewFrame):
+    def __init__(self, master, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+
+        # init value
+        self.loop: AbstractEventLoop = asyncio.get_event_loop()
+        self.setting_valorant: dict = {}
+        self.popup_is_show = False
+        self.height = 0
+        self.width = 0
+
+        # init layout
+        self.setting_view = CTkTextbox(self, corner_radius=15)
+        self.setting_view.place(x=0, y=0, relwidth=1, relheight=1)
+        self.setting_view.insert('0.0', json.dumps(Constant.Setting_Valorant, indent=4))
+
+        load_img = CTkImage(Image.open('./img/downloading-updates-d.png'),
+                            Image.open('./img/downloading-updates-l.png'))
+        save_img = CTkImage(Image.open('./img/save-d.png'), Image.open('./img/save-l.png'))
+
+        self.load_button = CTkButton(self, text='', height=40, width=40, image=load_img, fg_color="#2B2B2B",
+                                     bg_color="#1D1E1E", command=self.load_button_click_handel)
+        self.save_button = CTkButton(self, text='', height=40, width=40, image=save_img, fg_color="#2B2B2B",
+                                     bg_color="#1D1E1E", command=self.save_button_click_handel)
+        self.frame_acc = CTkFrame(self, bg_color="#1D1E1E")
+
+        # init event
+        self.popup_acc_render()
+
+        self.bind('<Configure>', self.update_pos)
+
+    def load_button_click_handel(self):
+        if self.popup_is_show:
+            self.hidden_popup()
+            return
+
+        self.show_popup()
+
+    def update_pos(self, configure):
+        self.height = configure.height
+        self.width = configure.width
+        self.load_button.place(x=configure.width - 30, y=30, anchor=CENTER)
+        self.save_button.place(x=configure.width - 30, y=80, anchor=CENTER)
+
+    def show_popup(self):
+        self.frame_acc.place(x=self.width - 55, y=10, anchor=NE)
+        self.popup_is_show = True
+
+    def hidden_popup(self):
+        self.frame_acc.place_forget()
+        self.popup_is_show = False
+
+    async def click_handel(self, acc):
+        for endpoint in Constant.EndPoints:
+            endpoint: EndPoints
+            if acc == endpoint.auth:
+                self.setting_view.delete('0.0', 'end')
+                print(endpoint)
+
+                setting = await endpoint.Setting.async_Fetch_Preference()
+                self.setting_valorant = setting
+                self.setting_view.insert('0.0', json.dumps(setting, indent=4))
+
+        self.hidden_popup()
+
+    def popup_acc_render(self):
+
+        for i in Constant.Accounts:
+            i: ExtraAuth
+            text = CTkButton(self.frame_acc, text=i.username, fg_color="transparent",
+                             command=lambda: self.loop.create_task(self.click_handel(i)))
+            text.pack(fill=X, padx=10, pady=5)
+
+    def save_button_click_handel(self):
+        Constant.Setting_Valorant = self.setting_valorant
+        CTkMessagebox(title="Success", message="Save Complicit")
+
+    def show(self):
+        super().show()
+
+
+class Shop(TabViewFrame):
+    def __init__(self, master, *args, **kw) -> None:
         super().__init__(master, *args, **kw)
 
         # init value
-        self.current_acc = current_acc
-        self.is_show = False
         self.loop = asyncio.get_event_loop()
 
         # setup layout
@@ -88,19 +195,19 @@ class Shop(CTkFrame):
         self.grid_columnconfigure(0, weight=3, uniform='a')
         self.grid_columnconfigure(1, weight=1, uniform='a')
 
-        self.bundle_label = ImageLabel(self, text='')
+        self.bundle_label = ImageLabel(self)
         self.bundle_label.grid(row=0, column=0, rowspan=4, sticky=NSEW, padx=5, pady=5)
 
         self.skins = [
-            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO),
-            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO),
-            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO),
-            ImageLabel(self, text='', width=50, fill_type=FILL_AUTO)
+            ImageLabel(self, fill_type=FILL_AUTO, corner_radius=0),
+            ImageLabel(self, fill_type=FILL_AUTO, corner_radius=0),
+            ImageLabel(self, fill_type=FILL_AUTO, corner_radius=0),
+            ImageLabel(self, fill_type=FILL_AUTO, corner_radius=0)
         ]
         for index, ele in enumerate(self.skins):
             ele.grid(row=index, column=1, sticky=NSEW, padx=5, pady=5)
 
-        self.current_acc.add_callback(self.handel_event)
+        Constant.Current_Acc.add_callback(self.handel_event)
 
     async def get_shop(self, endpoint: EndPoints):
         data = await endpoint.Store.Storefront()
@@ -108,12 +215,14 @@ class Shop(CTkFrame):
         skins = data["SkinsPanelLayout"]["SingleItemOffers"]
 
         bundle_url = await get_bundle_by_uuid(bundle)
-        self.bundle_label.set_img(url=bundle_url)
+        if self.is_show:
+            self.bundle_label.set_img(url=bundle_url)
 
         async def get_skin(uuid, index):
             ele = self.skins[index]
             skin_url = await get_weapon_skin_level_by_uuid(uuid)
-            ele.set_img(url=skin_url)
+            if self.is_show:
+                ele.set_img(url=skin_url)
 
         tasks = [self.loop.create_task(get_skin(id, index)) for index, id in enumerate(skins)]
 
@@ -121,19 +230,11 @@ class Shop(CTkFrame):
         pass
 
     def show(self):
-        self.pack(fill=BOTH, expand=True)
-        self.is_show = True
-        endpont = self.current_acc.get()
+        super().show()
+        endpont = Constant.Current_Acc.get()
         print(endpont)
         if isinstance(endpont, EndPoints):
-            self.loop.create_task(self.get_shop(self.current_acc.get()))
-
-    def hidden(self):
-        self.pack_forget()
-        self.is_show = False
-
-    def shop(self):
-        pass
+            self.loop.create_task(self.get_shop(Constant.Current_Acc.get()))
 
     async def handel_event(self, mode, value):
         await self.get_shop(value)
@@ -196,11 +297,13 @@ class TabMaster(CTkFrame):
         return button
 
 
-class ImageLabel(CTkLabel):
+class ImageLabel(CTkFrame):
     def __init__(self, master, path=None, url=None, size=None, corner_radius=20, fill_type=FILL_Y,
                  *args, **kw) -> None:
-        super().__init__(master, *args, **kw)
+        super().__init__(master, fg_color="transparent", *args, **kw)
 
+        self.label = CTkLabel(self, text='')
+        self.label.place(x=0, y=0, relheight=1, relwidth=1)
         self.img_size = None
         self.img = None
 
@@ -212,52 +315,58 @@ class ImageLabel(CTkLabel):
             self.bind('<Configure>', self.update_size_img)
 
     def update_size_img(self, event=None):
-        if self.img is not None:
-            if event is not None:
-                self.configure(image=self.crop(event.height, event.width))
-            else:
-                self.configure(image=self.crop(self.winfo_height(), self.winfo_width()))
+        if self.img is None:
+            return
+
+        if event is not None:
+            self.label.configure(image=self.crop(event.height, event.width))
+        else:
+            self.label.configure(image=self.crop(self.winfo_height(), self.winfo_width()))
+
+    def _crop_fill_y(self, height, width):
+        new_height = height
+        new_width = int(height / self.img_size[1] * self.img_size[0])
+        img = self.img.resize((new_width, new_height))
+
+        if width < new_width:
+            denta_width = new_width - width
+            img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
+
+        return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius), size=(width, height))
+
+    def _crop_fill_x(self, height, width):
+        new_width = width
+        new_height = int(width / self.img_size[0] * self.img_size[1])
+        img = self.img.resize((new_width, new_height))
+
+        if width < new_width:
+            denta_width = new_width - width
+            img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
+
+        return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius),
+                        size=(new_width, new_height))
 
     def crop(self, height, width):
         if self._fill_type == FILL_Y:
-            height_ = height
-            width_ = int(height / self.img_size[1] * self.img_size[0])
-            img = self.img.resize((width_, height_))
-
-            if width < width_:
-                denta_width = width_ - width
-                img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
-
-            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius), size=(width, height))
+            return self._crop_fill_y(height, width)
 
         elif self._fill_type == FILL_X:
-            width_ = width
-            height_ = int(width / self.img_size[0] * self.img_size[1])
-            img = self.img.resize((width_, height_))
-
-            if width < width_:
-                denta_width = width_ - width
-                img = img.crop((denta_width // 2, 0, denta_width // 2 + width, height))
-
-            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius),
-                            size=(width_, height_))
+            return self._crop_fill_x(height, width)
 
         elif self._fill_type == FILL_AUTO:
-            width_ = width
-            height_ = int(width / self.img_size[0] * self.img_size[1])
+            new_height = height - 1
+            new_width = int(height / self.img_size[1] * self.img_size[0])
+            if new_width > width:
+                new_width = width
+                new_height = int(width / self.img_size[0] * self.img_size[1])
 
-            if height_ > height:
-                height_ = height - 1
-                width_ = int(height / self.img_size[1] * self.img_size[0])
-                img = self.img.resize((width_, height_))
-            else:
-                img = self.img.resize((width_, height_))
+            img = self.img.resize((new_width, new_height))
 
-            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius), size=(width_, height_))
+            return CTkImage(cropping_image_in_a_rounded_rectangle(img, self._corner_radius),
+                            size=(new_width, new_height))
 
     def set_img(self, path=None, url=None):
         self.winfo_toplevel().loop.create_task(self.async_set_img(path, url))
-
 
     async def async_set_img(self, path=None, url=None):
         if url is not None:

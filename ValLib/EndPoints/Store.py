@@ -1,13 +1,13 @@
 import httpx
 import json
 from uuid import UUID
-from ..structs import Auth
+from ..structs import Auth, ExtraAuth
 from ..helper import make_headers, get_shard, get_region
 from .structs import PlayerLoadout, PlayerMMRResponse, MatchHistoryResponse
 
 
 class Store:
-    def __init__(self, auth: Auth, region=None, shard=None):
+    def __init__(self, auth: ExtraAuth, region=None, shard=None):
         self.auth = auth
         self.region = get_region(self.auth) if region is None else region
         self.shard = get_shard(self.region) if shard is None else shard

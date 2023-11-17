@@ -29,6 +29,10 @@ class AccStatus(CTkFrame):
         status = CTkLabel(self, text="ONLINE", font=self.font_status, text_color="#20FECA")
         status.pack(expand=True, fill='both')
 
+    def _in_match_wiget(self):
+        status = CTkLabel(self, text="IN-MATCH", font=self.font_status, text_color="#20FECA")
+        status.pack(expand=True, fill='both')
+
     def _offline_wiget(self):
         status = CTkLabel(self, text="OFFLINE", font=self.font_status, text_color="#FF4557")
         status.pack(expand=True, fill='both')
@@ -43,5 +47,7 @@ class AccStatus(CTkFrame):
             self._offline_wiget()
         elif status == "on":
             self._online_wiget()
+        elif status == "in":
+            self._in_match_wiget()
         else:
             self._in_math_wiget(status)

@@ -3,13 +3,13 @@ from uuid import UUID
 
 import httpx
 
-from ..structs import Auth
+from ..structs import Auth, ExtraAuth
 from ..helper import get_region, get_shard, make_headers
 from ..parsing import zloads, zdumps
 
 
 class Setting:
-    def __init__(self, auth: Auth, region=None, shard=None):
+    def __init__(self, auth: ExtraAuth, region=None, shard=None):
         self.auth = auth
         self.region = get_region(self.auth) if region is None else region
         self.shard = get_shard(self.region) if shard is None else shard
