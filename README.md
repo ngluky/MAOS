@@ -12,3 +12,6 @@ MCOS: Multi account one setting
 - Account status 
   - Check if your friend is playing or not
 
+
+## home
+![](.\screenshot\home.png)
