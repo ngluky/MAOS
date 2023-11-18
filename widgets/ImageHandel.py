@@ -4,7 +4,6 @@ import httpx
 from PIL import Image, ImageOps, ImageDraw, ImageSequence
 import io
 import urllib.request
-import cv2
 import numpy as np
 from io import BytesIO
 
