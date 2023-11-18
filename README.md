@@ -14,4 +14,4 @@ MCOS: Multi account one setting
 
 
 ## home
-![](.\screenshot\home.png)
+![](https://github.com/ngluky/MAOS/blob/main/screenshot/home.png?raw=true)
