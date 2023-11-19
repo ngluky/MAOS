@@ -11,7 +11,6 @@ from ..version import Version
 async def solve_captcha(data: Dict[str, Any]):
     token = data["captcha"]["hcaptcha"]["data"]
     key = data["captcha"]["hcaptcha"]["key"]
-    print(token, key)
     server = ServerCaptcha(token, key)
     await server.server_start()
     return server.token

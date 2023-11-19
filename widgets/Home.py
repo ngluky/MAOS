@@ -1,22 +1,18 @@
-import asyncio
 import subprocess
-import tkinter as tk
-from customtkinter import *
-from PIL import Image
-from asyncio.events import AbstractEventLoop
-from threading import Thread
+import logging
 
+from threading import Thread
+from asyncio.events import AbstractEventLoop
+from Constant import Constant
+from RiotClientHandel import RiotClientService, find_riot_client
+from ValLib import EndPoints
 from widgets.AccInfor import *
 from widgets.TabView import *
-from widgets.Variable import ListVariable, CustomVariable
 from widgets.Timer_async import SetInterval, SetTimeout
-
-from RiotClientHandel import RiotClientService, find_riot_client
-from Constant import Constant
-from ValLib import Auth, EndPoints, get_region, get_shard, async_get_region, ExtraAuth
 
 CORNER_RADIUS = 20
 
+logger = logging.getLogger("main_app")
 
 async def get_player_card(player_card_id) -> str:
     async with httpx.AsyncClient() as client:
@@ -30,7 +26,6 @@ async def get_player_name(pvp: EndPoints) -> str:
     name_data = dict(name_data[0])
     GameName = name_data.get('GameName', '')
     TagLine = name_data.get('TagLine', '')
-    print(GameName, TagLine)
     if GameName != '' and TagLine != '':
         return f"{GameName}#{TagLine}"
     return ''
@@ -40,7 +35,6 @@ async def get_player_titles(player_title_id):
     if player_title_id == "00000000-0000-0000-0000-000000000000":
         return ""
     async with httpx.AsyncClient() as client:
-        print(player_title_id)
         resp = await client.get(f"https://valorant-api.com/v1/playertitles/{player_title_id}")
         data = resp.json()
         try:
@@ -85,7 +79,7 @@ class Home(CTkFrame):
         self.main_home_frame.pack(fill=BOTH, expand=True)
 
     async def handel_play_button(self):
-        print('play button clicked')
+        logger.debug('play button clicked')
 
         RiotClientService.kill_RiotClientServices()
 
@@ -101,7 +95,7 @@ class Home(CTkFrame):
         path = find_riot_client()
         RiotClientService.CreateAuthenticationFile(endpoint.auth)
 
-        print("start_game")
+        logger.debug('start game')
         command = f"{path} --launch-product=valorant --launch-patchline=live --insecure --launch-product=valorant"
         thread = Thread(target=self.star_game, args=(command,))
         thread.start()
@@ -113,7 +107,8 @@ class Home(CTkFrame):
         self.loop.create_task(self.game_quit())
 
     async def game_quit(self):
-        print('game_quit')
+        logger.debug('game quit')
+        
         RiotClientService.kill_RiotClientServices()
         # set current setting
         endpoint: EndPoints = Constant.Current_Acc.get()
@@ -174,13 +169,10 @@ class Home(CTkFrame):
         party_infor = await account.Party.async_Party_Player()
         if party_infor.get("httpStatus", False):
             self.acc_infor.set_status_current_account("off")
-            print("offline")
         else:
             current_game = await account.CurrentGame.async_Current_Game()
             match_id = current_game.get("MatchID", False)
             if match_id:
                 self.acc_infor.set_status_current_account("in")
-                print("in match")
             else:
                 self.acc_infor.set_status_current_account("on")
-                print("online")

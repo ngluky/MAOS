@@ -15,5 +15,6 @@ __all__ = [
     "Weapons",
     "get_shard",
     "get_region",
-    "async_get_region"
+    "async_get_region",
+    "async_login_cookie"
 ]

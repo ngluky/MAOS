@@ -1,7 +1,7 @@
-import tkinter as tk
 from customtkinter import *
+
+from asyncio.events import AbstractEventLoop
 from widgets.ImageHandel import open_gif_image
-from typing import Union, Tuple
 
 PROGRESS = 1
 ICON = 0

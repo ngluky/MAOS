@@ -1,14 +1,16 @@
-import asyncio
 import inspect
-from asyncio.events import AbstractEventLoop
+import asyncio
 import tkinter as tk
-from customtkinter import *
-from PIL import Image
+import logging
+
+from asyncio.events import AbstractEventLoop
 
 from widgets.AccStatus import *
 from widgets.ImageHandel import *
 
 URL_PLYER_CARD_DEF = "https://media.valorant-api.com/playercards/c89194bd-4710-b54e-8d6c-60be6274fbb2/displayicon.png"
+
+logger = logging.getLogger("main_app")
 
 
 class Acc(CTkFrame):
@@ -100,7 +102,7 @@ class AccInfor(CTkFrame):
         # init frame
         self.height = self.master["height"]
         self.corner_radius = corner_radius
-        self.loop: AbstractEventLoops = self.winfo_toplevel().loop
+        self.loop: AbstractEventLoop = self.winfo_toplevel().loop
         self.configure(height=self.height)
 
         # setup value
@@ -157,7 +159,7 @@ class AccInfor(CTkFrame):
         self.button_frame.lift()
 
     def _render_frame(self, data: dict):
-        print(data)
+        logger.info(data)
         frame = Acc(self, 20, height=self.height)
         frame.set_avt(data.get('avt', ''))
         frame.set_name(data.get('name', ''))
@@ -179,14 +181,11 @@ class AccInfor(CTkFrame):
         self.render_acc()
 
     def set_status_current_account(self, text):
-        frame = self.frames[self.target_index // self.height]
+        index = self.target_index // self.height
+        if len(self.frames) >= index:
+            return
+        frame = self.frames[index]
         frame.set_status(text)
-
-    def get(self, index):
-        pass
-
-    def remove(self, index):
-        pass
 
     def up(self):
         if self.target_index - self.height < 0:

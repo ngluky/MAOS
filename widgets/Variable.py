@@ -1,6 +1,5 @@
 import asyncio
 import inspect
-from typing import Coroutine
 
 
 class ListVariable(list):

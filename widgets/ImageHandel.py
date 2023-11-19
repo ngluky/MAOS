@@ -1,11 +1,12 @@
-import asyncio
 import functools
-import httpx
-from PIL import Image, ImageOps, ImageDraw, ImageSequence
 import io
-import urllib.request
+import httpx
 import numpy as np
+
+from asyncio.events import AbstractEventLoop
 from io import BytesIO
+from PIL import Image, ImageDraw
+
 
 MASK_CIRCULAR = "./img/mask_circular.png"
 
@@ -46,7 +47,7 @@ def async_memoize():
 
 @memoize
 def load_img_from_url(url) -> Image.Image:
-    img_data = requests.get(url).content
+    img_data = httpx.get(url).content
     return Image.open(io.BytesIO(img_data)).convert("RGBA")
 
 
@@ -68,7 +69,6 @@ def cropping_image_in_a_circular(img: Image.Image) -> Image.Image:
 
 def cropping_image_mask(img: Image.Image, mask: Image.Image) -> Image.Image:
     background = Image.new("RGBA", img.size, (0, 0, 0, 0))
-    # print(mask.mode , img.mode)
     new_img = Image.composite(img, background, mask)
     return new_img
 

@@ -1,6 +1,6 @@
-import tkinter as tk
-from customtkinter import *
 from typing import Union, Tuple
+
+from customtkinter import *
 
 OFFLINE: str = 'off'
 ONLINE: str = 'on'

@@ -112,18 +112,13 @@ class ServerCaptcha:
 
     async def server_start(self):
         self.server = await asyncio.start_server(self.tcp_handler, '127.0.0.1', 80)
-
-        print("captcha server stated at http://localhost:80")
         webbrowser.open("http://localhost:80", new=2)
         async with self.server:
             try:
                 await self.server.serve_forever()
             except asyncio.CancelledError:
                 pass
-
-            print("ok")
             await self.server.wait_closed()
-            print('ok')
 
     def stop(self):
         self.server.close()

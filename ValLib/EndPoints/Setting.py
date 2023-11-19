@@ -25,7 +25,6 @@ class Setting:
         if "data" not in jsonData:
             return {}
         data = zloads(jsonData["data"])
-        print(json.dumps(data))
         return data
 
     async def async_Fetch_Preference(self):

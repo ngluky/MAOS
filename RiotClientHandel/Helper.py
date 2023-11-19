@@ -2,8 +2,11 @@ import os
 import sys
 import ctypes
 import json
+import logging
+
 from win32api import *
 
+logger = logging.getLogger("main_app")
 
 def find_riot_client():
     clients = []
@@ -17,7 +20,7 @@ def find_riot_client():
         with open(riot_install_path, 'r') as file:
             config = json.load(file)
     except FileNotFoundError as e:
-        print("Riot Client Check: Could not properly parse json file")
+        logger.warning("Riot Client Check: Could not properly parse json file")
         return None
 
     for client_type in ['rc_live', 'rc_beta', 'rc_esports', 'rc_default']:

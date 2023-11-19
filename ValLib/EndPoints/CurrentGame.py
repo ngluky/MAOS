@@ -21,8 +21,6 @@ class CurrentGame:
 
         resp = httpx.get(url, headers=headers)
 
-        print(resp.text)
-
         return resp.json()
 
     async def async_Current_Game(self, player_UUID: UUID = None) -> dict:

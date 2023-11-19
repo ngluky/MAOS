@@ -1,6 +1,11 @@
 from widgets.Variable import ListVariable, CustomVariable
 from ValLib import ExtraAuth
 
+setting = {
+        "startup with window": False,
+        "refresh time": 10,
+        "craft shortcut": False
+    }
 
 class SingletonMeta(type):
     _instances = {}
@@ -18,3 +23,4 @@ class Constant(metaclass=SingletonMeta):
     Current_Acc: CustomVariable = CustomVariable(None)
     Setting_Valorant: dict = {}
     Current_Acc_Setting: dict = {}
+    App_Setting: CustomVariable = CustomVariable(setting)
