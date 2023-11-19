@@ -10,6 +10,7 @@ from CTkMessagebox import CTkMessagebox
 from Constant import Constant
 from ValLib import EndPoints, ExtraAuth
 from widgets.Structs import TabViewFrame
+from widgets.ImageHandel import load_img
 
 
 class ValorantSetting(TabViewFrame):
@@ -28,11 +29,12 @@ class ValorantSetting(TabViewFrame):
         self.setting_view.place(x=0, y=0, relwidth=1, relheight=1)
         self.setting_view.insert('0.0', json.dumps(Constant.Setting_Valorant, indent=4))
 
-        load_img = CTkImage(Image.open('./img/downloading-updates-d.png'),
-                            Image.open('./img/downloading-updates-l.png'))
-        save_img = CTkImage(Image.open('./img/save-d.png'), Image.open('./img/save-l.png'))
+        load_img_ = CTkImage(load_img('./img/downloading-updates-d.png'),
+                            load_img('./img/downloading-updates-l.png'))
+        save_img = CTkImage(load_img('./img/save-d.png'),
+                            load_img('./img/save-l.png'))
 
-        self.load_button = CTkButton(self, text='', height=40, width=40, image=load_img, fg_color="#2B2B2B",
+        self.load_button = CTkButton(self, text='', height=40, width=40, image=load_img_, fg_color="#2B2B2B",
                                      bg_color="#1D1E1E", command=self.load_button_click_handel)
         CTkToolTip(self.load_button, "load setting from account")
         self.save_button = CTkButton(self, text='', height=40, width=40, image=save_img, fg_color="#2B2B2B",

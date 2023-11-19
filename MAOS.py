@@ -196,6 +196,12 @@ class App(CTk):
 
 
 def add_font_file(file):
+    
+    if getattr(sys, 'frozen', False):
+        file = os.path.join(sys._MEIPASS, file)
+    else:
+        file = file
+    
     fr_private = 0x10
 
     file = ctypes.byref(ctypes.create_unicode_buffer(file))
@@ -205,12 +211,18 @@ def add_font_file(file):
         raise RuntimeError("Error while loading font.")
 
 
+icon_path = r".\icons\icon.ico"
+if getattr(sys, 'frozen', False):
+    icon_path = os.path.join(sys._MEIPASS, icon_path)
+else:
+    icon_path = icon_path
+
 class MainApp:
     def __init__(self):
         self.window = None
 
     async def exec(self, loop):
-        self.window = App((810, 450), "MAOS", r".\icons\icon.ico", loop)
+        self.window = App((810, 450), "MAOS", icon_path, loop)
         await self.window.show()
 
 if __name__ == "__main__":

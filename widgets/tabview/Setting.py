@@ -5,7 +5,7 @@ from Constant import Constant
 from customtkinter import *
 
 from widgets.Structs import TabViewFrame
-
+from widgets.ImageHandel import load_img
 SETTING = {
     "startup with window": False,
     "refresh time": 10,
@@ -29,7 +29,7 @@ class Setting(TabViewFrame):
         self.main_frame.grid_columnconfigure((0,4), weight=3)
         self.main_frame.grid_columnconfigure( (1,2,3), weight=1)
         
-        save_img = CTkImage(Image.open('./img/save-d.png'), Image.open('./img/save-l.png'))
+        save_img = CTkImage(load_img('./img/save-d.png'), load_img('./img/save-l.png'))
 
         
         self.save_button = CTkButton(self, text='', height=40, width=40, image=save_img, fg_color="#2B2B2B",

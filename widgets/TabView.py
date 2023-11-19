@@ -17,11 +17,11 @@ class TabView(CTkFrame):
         super().__init__(master, *args, **kw)
 
         self.button_icon = {
-            "shop": CTkImage(Image.open("./img/shop-d.png"), Image.open("./img/shop-l.png")),
-            "Valorant Setting": CTkImage(Image.open("./img/curly-brackets-d.png"),
-                                         Image.open("./img/curly-brackets-l.png")),
-            "match": CTkImage(Image.open("./img/feed-d.png"), Image.open("./img/feed-l.png")),
-            "setting": CTkImage(Image.open("./img/support-d.png"), Image.open("./img/support-l.png"))
+            "shop": CTkImage(load_img("./img/shop-d.png"), load_img("./img/shop-l.png")),
+            "Valorant Setting": CTkImage(load_img("./img/curly-brackets-d.png"),
+                                         load_img("./img/curly-brackets-l.png")),
+            "match": CTkImage(load_img("./img/feed-d.png"), load_img("./img/feed-l.png")),
+            "setting": CTkImage(load_img("./img/support-d.png"), load_img("./img/support-l.png"))
         }
         # tab_title_view
         self.tab_title = TabMaster(self, fg_color="transparent", orientation=HORIZONTAL,

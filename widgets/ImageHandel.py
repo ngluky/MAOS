@@ -2,8 +2,9 @@ import functools
 import io
 import httpx
 import numpy as np
+import os
+import sys
 
-from asyncio.events import AbstractEventLoop
 from io import BytesIO
 from PIL import Image, ImageDraw
 
@@ -11,7 +12,6 @@ from PIL import Image, ImageDraw
 MASK_CIRCULAR = "./img/mask_circular.png"
 
 cache = {}
-
 
 def memoize(func):
     global cache
@@ -46,6 +46,15 @@ def async_memoize():
 
 
 @memoize
+def load_img(path):
+    if getattr(sys, 'frozen', False):
+        image = Image.open(os.path.join(sys._MEIPASS, path))
+    else:
+        image = Image.open(path)
+    
+    return image
+
+@memoize
 def load_img_from_url(url) -> Image.Image:
     img_data = httpx.get(url).content
     return Image.open(io.BytesIO(img_data)).convert("RGBA")
@@ -62,7 +71,7 @@ async def async_load_img_from_url(url) -> Image.Image:
 
 
 def cropping_image_in_a_circular(img: Image.Image) -> Image.Image:
-    mask_ = Image.open(MASK_CIRCULAR).convert('L')
+    mask_ = load_img(MASK_CIRCULAR).convert('L')
     mask_ = mask_.resize(img.size)
     return cropping_image_mask(img, mask_)
 
@@ -99,7 +108,7 @@ def remove_background(img: Image.Image) -> Image.Image:
 
 def open_gif_image(path) -> list[Image.Image]:
     img = []
-    with Image.open(path) as im:
+    with load_img(path) as im:
 
         try:
             while 1:
